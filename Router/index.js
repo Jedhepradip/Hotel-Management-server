@@ -33,6 +33,8 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
             return res.status(400).json({ Massage: "All Filed Is The Required..!" })
         }
 
+        console.log(req.body);
+
         const NumberCheck = await UserModel.findOne({ Phone: Phone })
         const NameCheck = await UserModel.findOne({ Name: Name })
 
@@ -46,7 +48,7 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
 
         const PasswordHeas = await bcrypt.hash(Password, 11)
         const UserData = new UserModel({
-            ProfilImg: req.file.originalname,
+            // ProfilImg: req.file.originalname,
             Name: Name,
             Phone: Phone,
             Password: PasswordHeas,
