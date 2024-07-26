@@ -46,7 +46,7 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
 
         const PasswordHeas = await bcrypt.hash(Password, 11)
         const UserData = new UserModel({
-            ProfilImg: req.file.originalname,
+            // ProfilImg: req.file.originalname,
             Name: Name,
             Phone: Phone,
             Password: PasswordHeas,
