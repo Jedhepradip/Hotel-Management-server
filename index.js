@@ -18,6 +18,6 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 app.use("/", Indexrouter)
 
-app.listen(PORT, HOSTNAME, () => {
+app.listen(PORT, () => {
     console.log(chalk.green.bold(`Server running on http://localhost:${PORT}\n`));
 });
