@@ -30,7 +30,7 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
         const { Name, Phone, Password } = req.body;
         console.log(req.body);
         if (!Name, !Phone, !Password) {
-            return res.status(400).json({ Massage: "All Filed Is The Required..!" })
+            return res.status(400).json({ Message: "All Filed Is The Required..!" })
         }
 
         console.log(req.body);
@@ -39,16 +39,16 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
         const NameCheck = await UserModel.findOne({ Name: Name })
 
         if (NumberCheck) {
-            return res.status(400).json({ Massage: "Phone Number Is All Ready Exist...!" })
+            return res.status(400).json({ Message: "Phone Number Is All Ready Exist...!" })
         }
 
         if (NameCheck) {
-            return res.status(400).json({ Massage: "User Name All Ready Exist ...!" })
+            return res.status(400).json({ Message: "User Name All Ready Exist ...!" })
         }
 
         const PasswordHeas = await bcrypt.hash(Password, 11)
         const UserData = new UserModel({
-            // ProfilImg: req.file.originalname,
+            ProfilImg: req.file.originalname,
             Name: Name,
             Phone: Phone,
             Password: PasswordHeas,
@@ -64,11 +64,11 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
 
         console.log("token", token);
         res.cookie("token", token)
-        return res.status(200).json({ Massage: "Registration Successful...", token: token })
+        return res.status(200).json({ Message: "Registration Successful...", token: token })
 
     } catch (error) {
         console.log("Internal Server Error :", error);
-        return res.status(500).json({ Massage: "Internal Server Error" })
+        return res.status(500).json({ Message: "Internal Server Error", error })
     }
 })
 // To Login User 
@@ -84,7 +84,7 @@ router.post("/User/Login", async (req, res) => {
         const NumberCheck = await UserModel.findOne({ Phone });
 
         if (!NumberCheck) {
-            return res.status(400).json({ Message: "Incorrect number or phone...!" }); // Corrected typo
+            return res.status(400).json({ Message: "Incorrect Number..." }); // Corrected typo
         }
 
         const PasswordMatch = await bcrypt.compare(Password, NumberCheck.Password); // Corrected typo
@@ -122,7 +122,7 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
             RoomstobookingUser.push(result)
         }
 
-        res.status(200).json({user:user,RoomstobookingUser:RoomstobookingUser})
+        res.status(200).json({ user: user, RoomstobookingUser: RoomstobookingUser })
         // res.status(200).json(user)
     } catch (error) {
         console.log(error);
@@ -135,22 +135,34 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('Img'), async
     try {
         const userId = req.user.id;
         const user = await UserModel.findById(userId);
-        if (!user) return res.status(404).json({ msg: "user not found" });
+        if (!user) return res.status(404).json({ Message: "user not found" });
         const dataToUpdate = req.body;
 
         let phone = dataToUpdate.Phone == user.Phone
+
         if (!phone) {
             let numberfind = await UserModel.findOne({ Phone: dataToUpdate.Phone })
             let numbers = numberfind == null
             if (!numbers) {
-                return res.status(400).json({ msg: "this phoneNumber is already exits" })
+                return res.status(400).json({ Message: "this phoneNumber is already exits" })
             }
         }
 
+        // let UserName = dataToUpdate.Name == user.Name
+        // if (!UserName) {
+        //     let name = await UserModel.findOne({ Name: dataToUpdate.Name })
+        //     let User = name == null
+        //     if (!User) {
+        //         return res.status(400).json({ Message: "UserName All Ready Exsit" })
+        //     }
+        // }
+
         let UserName = await UserModel.findOne({ Name: dataToUpdate.Name })
         if (UserName) {
-            if (UserName.Name === user.Name) {
+            if (UserName.Name == user.Name) {
+                console.log("okok");
             } else {
+                console.log("User Name ");
                 return res.status(400).json({ Message: "UserName All Ready Exsit" })
             }
         }
@@ -160,7 +172,6 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('Img'), async
                 const saltRounds = 11;
                 const hashedPassword = await bcrypt.hash(dataToUpdate.Password, saltRounds);
                 dataToUpdate.Password = hashedPassword;
-                console.log("Password converted to hash.");
             } catch (error) {
                 console.error("Error hashing the password:", error);
             }
@@ -169,13 +180,25 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('Img'), async
             console.log("Password not converted to hash.");
         }
 
+
+        if (req.file) {
+            console.log("okok");
+            console.log("User", user);
+            user.ProfilImg = req.file.originalname
+            user.save()
+        } else {
+            console.log("Not");
+
+            user.ProfilImg = user.ProfilImg
+        }
+
         const updatedUser = await UserModel.findByIdAndUpdate(userId, dataToUpdate, { new: true })
         console.log("updatedUser ", updatedUser);
         res.status(200).json({ updatedUser })
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({ msg: "internal server error" });
+        res.status(500).json({ Message: "internal server error" });
     }
 })
 
@@ -241,11 +264,12 @@ router.put("/User/Rooms/Payments/:RoomsId", jwtAuthMiddleware, async (req, res) 
             return res.status(400).json({ Massage: "Rooms Not Found" })
         }
 
-        User.Orders.Rooms.push({ roomsid, CardNumber, CARDEXPIRY, CARDCVC, CARDHOLDERNAME, })
+        Roomsindfo.Booked = true
+        User.Orders.Rooms.push({ roomsid, CardNumber, CARDEXPIRY, CARDCVC, CARDHOLDERNAME })
 
-        // let Roomsfind = User.Orders.default
 
         await User.save()
+        await Roomsindfo.save()
 
         console.log(User);
 
@@ -295,6 +319,11 @@ router.put("/Rooms/Removeto/AddtoCard/:removeroomsId", jwtAuthMiddleware, async 
         user.Orders.Rooms = user.Orders.Rooms.filter(id => id.roomsid !== RoomsId);
 
         // Save the updated user document
+        let Rooms = await RoomsData.findById(RoomsId)
+
+        Rooms.Booked = false
+
+        Rooms.save()
         let updatedUser = await user.save();
 
         // Respond with the updated user (optional)
@@ -314,6 +343,8 @@ router.get("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
         const Rooms = await RoomsData.findById(RoomsId)
         const User = await UserModel.findById(UserId)
 
+        console.log("User likes :", User);
+
         if (!Rooms) {
             return res.status(400).json({ Message: "Rooms Not Found" })
         }
@@ -324,9 +355,14 @@ router.get("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
         } else {
             Rooms.likes.push({ like: UserId })
         }
-        await Rooms.save()
+
+        let likesinrooms = await Rooms.save()
+
+        console.log("likesinrooms :", likesinrooms);
+
         Rooms.likes.map(like => like.like.toHexString());
         const Roomsall = await RoomsData.find()
+
         return res.status(200).json({ Roomsall: Roomsall, Rooms: Rooms });
     } catch (error) {
         console.log(error);
@@ -358,14 +394,15 @@ router.post("/User/Contact", async (req, res) => {
 })
 
 // Forgot Password to User
-router.post("/User/ForgotPassword", async (req, res) => {
+router.post("/User/ForgotPassword/:Phone", async (req, res) => {
     try {
-        const { Phone } = req.body
-        if (!Phone) {
-            return res.status(400).json({ message: "Filed Is Required" })
-        }
 
-        const User = await UserModel.findOne(Phone)
+        let Phone = req.params.Phone
+        console.log(Phone);
+        if (!Phone) {
+            return res.status(400).json({ Message: "Filed Is Required" })
+        }
+        const User = await UserModel.findOne({ Phone: Phone })
 
         if (!User) {
             return res.status(401).json({ Message: "User Not Found" })
@@ -373,27 +410,32 @@ router.post("/User/ForgotPassword", async (req, res) => {
         return res.status(200).json(User._id)
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ message: "Internal Server Error" })
+        return res.status(500).json({ Message: "Internal Server Error" })
     }
 })
 
 //Create New Password to the login
-router.post("Createpassword/:UserId", async (req, res) => {
+router.post("/Createpassword/:UserId", async (req, res) => {
     try {
-        const UserIs = req.params.UserId
-        const { Password, CPassword } = req.body
+        const UserId = req.params.UserId;
+        const { Password, CPassword } = req.body;
+        console.log("req.body:", req.body);
+
         if (!Password || !CPassword) {
-            return res.status(400).json({ Message: "All Filed Is Required..." })
+            return res.status(400).json({ Message: "All Fields Are Required..." });
         }
-        if (Password == CPassword) {
-            const PasswordHash = await bcrypt.hash(Password, 11)
-            const User = await UserModel.findByIdAndUpdate(UserIs, { Password: PasswordHash }, { new: true }).select("Password")
-            return res.status(200).json({ Massage: "Password Updata Successfully", User })
+
+        if (Password === CPassword) {
+            const PasswordHash = await bcrypt.hash(Password, 11);
+            const User = await UserModel.findByIdAndUpdate(UserId, { Password: PasswordHash }, { new: true }).select("Password");
+            console.log("User:", User);
+            return res.status(200).json({ Message: "Password Updated Successfully", User });
         }
-        return res.status(400).json({ message: "Password Dont Mach..." })
+        return res.status(400).json({ Message: "Passwords Don't Match..." });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ Message: "Server Error" });
     }
-})
+});
 
 export default router

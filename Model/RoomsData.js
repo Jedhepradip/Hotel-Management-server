@@ -33,7 +33,11 @@ const RoomsSchema = new mongoose.Schema({
             type: Schema.Types.ObjectId,
             ref: 'UserModel'
         }
-    }]
+    }],
+    Booked:{
+        type: Boolean,
+        default:false
+    }
 });
 
 export default mongoose.model("Rooms", RoomsSchema);
