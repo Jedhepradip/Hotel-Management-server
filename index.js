@@ -8,7 +8,6 @@ import db from './db/db.js';
 import cookieParser from 'cookie-parser';
 const app = express()
 const PORT = process.env.PORT || 3000
-const HOSTNAME = process.env.HOSTNAME || 'localhost'
 
 app.use(cors())
 
@@ -19,6 +18,6 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 app.use("/", Indexrouter)
 
-app.listen(PORT, HOSTNAME, () => {
-    console.log(chalk.green.bold(`Server running on http://${HOSTNAME}:${PORT}\n`));
+app.listen(PORT, () => {
+    console.log(chalk.green.bold(`Server running on http://localhost:${PORT}\n`));
 });

@@ -68,7 +68,11 @@ router.post("/User/Registration", upload.single('Img'), async (req, res) => {
 
     } catch (error) {
         console.log("Internal Server Error :", error);
+<<<<<<< HEAD
         return res.status(500).json({ Message: "Internal Server Error", error })
+=======
+        return res.status(500).json({ Massage: "Internal Server Error..." })
+>>>>>>> 9b28941202cbbc574230e03224aac0eea20cdafa
     }
 })
 // To Login User 
