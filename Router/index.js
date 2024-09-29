@@ -205,28 +205,38 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('Img'), async
 // To Add The Rooms Data In Database 
 router.post("/rooms/data/owner", async (req, res) => {
     try {
-        const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
+        // Expecting an array of rooms in the request body
+        const rooms = req.body.rooms;
 
-        const newRoom = new RoomsData({
-            title: title,
-            description: description,
-            price: price,
-            discountPercentage: DiscountPercentage,
-            discountPrice: DiscountPrice,
-            location: location,
-            thumbnail: thumbnail,
-            images: images.map(element =>
-                ({ imgUrl: element })
-            ),
-            country: country,
-        });
-        await newRoom.save();
-        res.status(200).json({ newRoom: newRoom });
+        if (!Array.isArray(rooms)) {
+            return res.status(400).json({ error: "Invalid data format. Expected an array of rooms." });
+        }
+
+        console.log(req.body);
+        
+        // Map over the array and create new room objects
+        const newRooms = rooms.map(room => ({
+            title: room.title,
+            description: room.description,
+            price: room.price,
+            discountPercentage: room.DiscountPercentage,
+            discountPrice: room.DiscountPrice,
+            location: room.location,
+            thumbnail: room.thumbnail,
+            images: room.images.map(image => ({ imgUrl: image })),
+            country: room.country,
+        }));
+
+        // Use the insertMany method to bulk insert the rooms
+        const insertedRooms = await RoomsData.insertMany(newRooms);
+
+        res.status(200).json({ newRooms: insertedRooms });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
 
 // To send The Rooms Data In The Frontend 
 router.get("/Product/data", async (req, res) => {
