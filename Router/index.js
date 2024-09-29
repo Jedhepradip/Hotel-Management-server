@@ -203,33 +203,81 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('Img'), async
 })
 
 // To Add The Rooms Data In Database 
+// router.post("/rooms/data/owner", async (req, res) => {
+//     try {
+//         // Expecting an array of rooms in the request body      
+//         const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
+//         console.log(req.body);
+
+
+//         // if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !thumbnail || !images || !country) {
+//         //     return res.status(400).json({ message: "all Filed is Required" })
+//         // }
+
+//         console.log(req.body);
+
+//         // Map over the array and create new room objects
+//         const newRooms = new RoomsData({
+//             title: title,
+//             description: description,
+//             price: price,
+//             discountPercentage: DiscountPercentage,
+//             discountPrice: DiscountPrice,
+//             location: location,
+//             thumbnail: thumbnail,
+//             images: images.map(image => ({ imgUrl: image })),
+//             country: country,
+//         });
+
+//         // Use the insertMany method to bulk insert the rooms
+//         const insertedRooms = await RoomsData.insertMany(newRooms);
+
+//         console.log(insertedRooms);
+
+
+//         res.status(200).json({ newRooms: insertedRooms });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// });
+
 router.post("/rooms/data/owner", async (req, res) => {
     try {
-        // Expecting an array of rooms in the request body
-        const rooms = req.body.rooms;
-
-        if (!Array.isArray(rooms)) {
-            return res.status(400).json({ error: "Invalid data format. Expected an array of rooms." });
-        }
+        // Expecting an array of rooms in the request body      
+        const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
 
         console.log(req.body);
-        
-        // Map over the array and create new room objects
-        const newRooms = rooms.map(room => ({
-            title: room.title,
-            description: room.description,
-            price: room.price,
-            discountPercentage: room.DiscountPercentage,
-            discountPrice: room.DiscountPrice,
-            location: room.location,
-            thumbnail: room.thumbnail,
-            images: room.images.map(image => ({ imgUrl: image })),
-            country: room.country,
-        }));
 
-        // Use the insertMany method to bulk insert the rooms
+        // Validate required fields
+        // if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !thumbnail || !images || !country) {
+        //     return res.status(400).json({ message: "All fields are required" });
+        // }
+
+        // // Check if 'images' is an array before attempting to map
+        // if (!Array.isArray(images)) {
+        //     return res.status(400).json({ message: "'images' must be an array" });
+        // }
+
+        // Create a new room object
+        const newRooms = new RoomsData({
+            title: title,
+            description: description,
+            price: price,
+            discountPercentage: DiscountPercentage,
+            discountPrice: DiscountPrice,
+            location: location,
+            thumbnail: thumbnail,
+            images: images.map(image => ({ imgUrl: image })),  // Mapping over images
+            country: country,
+        });
+
+        // Insert the new room data
         const insertedRooms = await RoomsData.insertMany(newRooms);
 
+        console.log(insertedRooms);
+
+        // Respond with the inserted room data
         res.status(200).json({ newRooms: insertedRooms });
     } catch (error) {
         console.error(error);
