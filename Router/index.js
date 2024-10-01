@@ -25,85 +25,87 @@ router.get("/", (req, res) => {
     res.send("Hello World")
 })
 // User Registration
-router.post("/User/Registration", upload.single('Img'), async (req, res) => {
+router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) => {
     try {
-        const { Name, Phone, Password } = req.body;
-        console.log(req.body);
-        if (!Name, !Phone, !Password) {
-            return res.status(400).json({ Message: "All Filed Is The Required..!" })
+        const { name, email, mobile, password } = req.body
+
+        if (!req.file) {
+            return res.status(400).json({ message: "Profile Img Not Found" });
         }
 
-        console.log(req.body);
-
-        const NumberCheck = await UserModel.findOne({ Phone: Phone })
-        const NameCheck = await UserModel.findOne({ Name: Name })
-
-        if (NumberCheck) {
-            return res.status(400).json({ Message: "Phone Number Is All Ready Exist...!" })
+        if (!name || !email || !mobile || !password || !role) {
+            return res.status(400).json({ message: "Something is missing..." })
         }
 
-        if (NameCheck) {
-            return res.status(400).json({ Message: "User Name All Ready Exist ...!" })
+        const Emailexists = await UserData.findOne({ email: email })
+        if (Emailexists) {
+            return res.status(400).json({ message: "User already exist with this email..." })
         }
 
-        const PasswordHeas = await bcrypt.hash(Password, 11)
-        const UserData = new UserModel({
-            ProfilImg: req.file.originalname,
-            Name: Name,
-            Phone: Phone,
-            Password: PasswordHeas,
+        const mobileexist = await UserData.findOne({ mobile: mobile })
+        if (mobileexist) {
+            return res.status(400).json({ message: "User already exist with this mobile number..." })
+        }
+
+        console.log(!(email == "pradipjedhe69@gmail.com"));
+
+        if (role == "recruiter") {
+            if (!(email == "pradipjedhe69@gmail.com")) {
+                return res.status(400).json({ message: "Only Administrators Can Register For This Role" });
+            }
+        }
+
+        const haspassword = await bcrypt.hash(password, 11)
+        const User = new UserData({
+            ProfileImg: req.file?.originalname,
+            name,
+            email,
+            mobile,
+            password: haspassword,
+            role,
         })
-        await UserData.save()
 
+        await User.save()
         const payload = {
-            id: UserData._id,
-            Name: UserData.Name
-        }
-
+            id: User.id,
+            email: User.email,
+            name: User.name,
+        };
         const token = generateToken(payload)
-
-        console.log("token", token);
-        res.cookie("token", token)
-        return res.status(200).json({ Message: "Registration Successful...", token: token })
+        return res.status(200).json({ message: "Registration Successful..", token, User })
 
     } catch (error) {
-        console.log("Internal Server Error :", error);
-        return res.status(500).json({ Message: "Internal Server Error", error })
+        console.log(error);
+        return res.status(500).json({ message: "Internal server Error" })
     }
 })
 // To Login User 
 router.post("/User/Login", async (req, res) => {
     try {
-        const { Password, Phone } = req.body;
-        console.log(req.body);
+        const { email, password, role } = req.body;
+        let Useremail = await UserData.findOne({ email })
 
-        if (!Password, !Phone) {
-            return res.status(400).json({ Message: "All Filed Is Required...!" })
+        if (!Useremail) {
+            return res.status(404).json({ message: "User not Found..." })
         }
 
-        const NumberCheck = await UserModel.findOne({ Phone });
+        let machpassword = await bcrypt.compare(password, Useremail.password)
 
-        if (!NumberCheck) {
-            return res.status(400).json({ Message: "Incorrect Number..." }); // Corrected typo
-        }
+        if (!machpassword) return res.status(400).json({ message: "Incorrect Password try again..." })
 
-        const PasswordMatch = await bcrypt.compare(Password, NumberCheck.Password); // Corrected typo
-
-        if (!PasswordMatch) {
-            return res.status(400).json({ Message: "Incorrect Password...!" });
-        }
+        if (role !== Useremail?.role) return res.status(400).json({ message: "Account doesn't exist with current role..." })
 
         const payload = {
-            id: NumberCheck._id,
-            Name: NumberCheck.Name
-        };
-        const token = generateToken(payload);
-        console.log("token", token);
-        res.status(200).json({ Message: "Login Successful...", token }); // Corrected typo
+            id: Useremail._id,
+            email: Useremail.email,
+            name: Useremail.name,
+        }
 
+        const token = generateToken(payload)
+        return res.status(200).json({ message: "User login successfully...", token })
     } catch (error) {
         console.log(error);
-        res.status(500).json({ Message: "Internal Server Error" }); // Corrected typo
+        return res.status(500).json({ message: "Internal Server Error..." })
     }
 });
 
@@ -131,69 +133,52 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
 })
 
 // User Profile Eidit
-router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('Img'), async (req, res) => {
+router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg'), async (req, res) => {
     try {
         const userId = req.user.id;
         const user = await UserModel.findById(userId);
         if (!user) return res.status(404).json({ Message: "user not found" });
         const dataToUpdate = req.body;
+        const { name, email, mobile, password, } = req.body;
 
-        let phone = dataToUpdate.Phone == user.Phone
-
-        if (!phone) {
-            let numberfind = await UserModel.findOne({ Phone: dataToUpdate.Phone })
-            let numbers = numberfind == null
-            if (!numbers) {
-                return res.status(400).json({ Message: "this phoneNumber is already exits" })
+        if (email) {
+            const EmailCheck = await UserData.findOne({ email })
+            if (EmailCheck) {
+                if (!(EmailCheck.email == user.email)) {
+                    return res.status(400).json({ message: "Email already exists" });
+                }
             }
         }
 
-        // let UserName = dataToUpdate.Name == user.Name
-        // if (!UserName) {
-        //     let name = await UserModel.findOne({ Name: dataToUpdate.Name })
-        //     let User = name == null
-        //     if (!User) {
-        //         return res.status(400).json({ Message: "UserName All Ready Exsit" })
-        //     }
-        // }
-
-        let UserName = await UserModel.findOne({ Name: dataToUpdate.Name })
-        if (UserName) {
-            if (UserName.Name == user.Name) {
-                console.log("okok");
-            } else {
-                console.log("User Name ");
-                return res.status(400).json({ Message: "UserName All Ready Exsit" })
+        if (mobile) {
+            const MobileCheck = await UserData.findOne({ mobile })
+            if (MobileCheck) {
+                if (!(MobileCheck.mobile == user.mobile)) {
+                    return res.status(400).json({ message: "Mobile Number already exists" });
+                }
             }
         }
 
-        if (dataToUpdate.Password) {
+        if (dataToUpdate.password) {
             try {
                 const saltRounds = 11;
-                const hashedPassword = await bcrypt.hash(dataToUpdate.Password, saltRounds);
-                dataToUpdate.Password = hashedPassword;
+                const hashedPassword = await bcrypt.hash(dataToUpdate.password, saltRounds);
+                dataToUpdate.password = hashedPassword;
             } catch (error) {
-                console.error("Error hashing the password:", error);
+                console.error(error);
             }
         } else {
-            dataToUpdate.Password = user.Password;
-            console.log("Password not converted to hash.");
+            dataToUpdate.password = user.password;
         }
 
-
         if (req.file) {
-            console.log("okok");
-            console.log("User", user);
-            user.ProfilImg = req.file.originalname
+            user.ProfileImg = req.file.originalname
             user.save()
         } else {
-            console.log("Not");
-
-            user.ProfilImg = user.ProfilImg
+            user.ProfileImg = user.ProfilImg
         }
 
         const updatedUser = await UserModel.findByIdAndUpdate(userId, dataToUpdate, { new: true })
-        console.log("updatedUser ", updatedUser);
         res.status(200).json({ updatedUser })
 
     } catch (error) {
@@ -291,7 +276,7 @@ router.get("/Product/data", async (req, res) => {
     try {
         const Product = await RoomsData.find()
         if (!Product) res.status(400).json({ message: "Product Is Not Found " })
-        res.status(200).json({ Product: Product })
+        res.status(200).json(Product)
     } catch (error) {
         console.log(error);
         res.status(501).json({ message: "Internal Server Error" })

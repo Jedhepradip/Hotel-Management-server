@@ -4,17 +4,21 @@ const UserModelData = new mongoose.Schema({
     ProfilImg: {
         type: String,
     },
-    Name: {
+    name: {
+        type: String,
+        require: true,
+    },
+    email: {
         type: String,
         require: true,
         unique: true,
     },
-    Phone: {
+    mobile: {
         type: Number,
         unique: true,
         require: true,
     },
-    Password: {
+    password: {
         type: String,
         require: true,
     },
@@ -36,7 +40,7 @@ const UserModelData = new mongoose.Schema({
             type: String,
             require: true,
         },
-        Rooms:[]
+        Rooms: []
     }
 
 })
