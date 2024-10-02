@@ -24,6 +24,72 @@ const upload = multer({ storage: storage });
 router.get("/", (req, res) => {
     res.send("Hello World")
 })
+
+router.post('/UserSendOtp', async (req, res) => {
+    try {
+        const { email, number } = req.body;
+        console.log(req.body);
+        
+        const user = await UserModel.findOne({ email: email });
+        if (user) {
+            return res.status(400).json({ message: "User already exist with this Email..." })
+        }
+        const MobileNum = await UserModel.findOne({ mobile: number })
+        if (MobileNum) {
+            return res.status(400).json({ message: "User already exist with this Number..." })
+        }
+        // Generate a 4-digit OTP
+        const otp = Math.floor(1000 + Math.random() * 9000);
+
+        // Set up the email transporter
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            secure: true,
+            port: Number(process.env.NODEMAILER_PORT) || 465,
+            auth: {
+                user: process.env.USER,
+                pass: process.env.PASS,
+            },
+        });
+
+        // Send OTP email
+        const info = await transporter.sendMail({
+            from: process.env.FROM,
+            to: email, // Send the email to the user
+            subject: "Sign In Confirmation & OTP Verification", // Subject line
+            text: `Your OTP is ${otp}`, // Fallback text
+            html: `
+               <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: black; text-aling:center;">Hello Confirmation & OTP Verification </h2>
+                <p>We noticed a successful sign-in to your account from a new device or location. For your security, we require additional verification before you can continue.</p>
+                
+                <p>Please use the following One-Time Password (OTP) to verify your identity:</p>
+                <div style="background-color: #f4f4f4; padding: 10px 20px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-align: center; max-width: 200px; margin: auto;">
+                    ${otp}
+                </div>
+                
+                <p style="margin-top: 20px;">The OTP is valid for the next 10 minutes. If you did not request this verification, please ignore this email or contact our support team immediately.</p>
+                
+                <h3 style="margin-top: 30px; color: #333;">Sign In Details:</h3>
+                <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px;">
+                    <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                    <p><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+                </div>
+                
+                <p style="margin-top: 30px;">Thank you for using our service. We are committed to keeping your account secure.</p>
+                
+                <p>Best regards, <br/> The Support Team</p>
+                
+                <p style="font-size: 12px; color: #888; margin-top: 20px;">If you did not sign in or request this OTP, please contact us immediately at support@yourcompany.com.</p>
+            </div>
+            `,
+        });
+        return res.status(200).json({ message: "OTP sent successfully Check Your Email... ", otp });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+})
 // User Registration
 router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) => {
     try {
@@ -33,7 +99,7 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
             return res.status(400).json({ message: "Profile Img Not Found" });
         }
 
-        if (!name || !email || !mobile || !password || !role) {
+        if (!name || !email || !mobile || !password) {
             return res.status(400).json({ message: "Something is missing..." })
         }
 
@@ -47,14 +113,6 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
             return res.status(400).json({ message: "User already exist with this mobile number..." })
         }
 
-        console.log(!(email == "pradipjedhe69@gmail.com"));
-
-        if (role == "recruiter") {
-            if (!(email == "pradipjedhe69@gmail.com")) {
-                return res.status(400).json({ message: "Only Administrators Can Register For This Role" });
-            }
-        }
-
         const haspassword = await bcrypt.hash(password, 11)
         const User = new UserData({
             ProfileImg: req.file?.originalname,
@@ -62,7 +120,6 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
             email,
             mobile,
             password: haspassword,
-            role,
         })
 
         await User.save()
@@ -82,7 +139,7 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
 // To Login User 
 router.post("/User/Login", async (req, res) => {
     try {
-        const { email, password, role } = req.body;
+        const { email, password } = req.body;
         let Useremail = await UserData.findOne({ email })
 
         if (!Useremail) {
@@ -90,10 +147,7 @@ router.post("/User/Login", async (req, res) => {
         }
 
         let machpassword = await bcrypt.compare(password, Useremail.password)
-
         if (!machpassword) return res.status(400).json({ message: "Incorrect Password try again..." })
-
-        if (role !== Useremail?.role) return res.status(400).json({ message: "Account doesn't exist with current role..." })
 
         const payload = {
             id: Useremail._id,
@@ -114,17 +168,17 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
     try {
         const userid = req.user.id
 
-        const user = await UserModel.findById(userid)
+        // const user = await UserModel.findById(userid)
 
-        let Roomsid = user.Orders.Rooms
+        // let Roomsid = user.Orders.Rooms
 
-        let RoomstobookingUser = [];
-        for (let index = 0; index < Roomsid.length; index++) {
-            let result = await RoomsData.findById(Roomsid[index].roomsid)
-            RoomstobookingUser.push(result)
-        }
+        // let RoomstobookingUser = [];
+        // for (let index = 0; index < Roomsid.length; index++) {
+        //     let result = await RoomsData.findById(Roomsid[index].roomsid)
+        //     RoomstobookingUser.push(result)
+        // }
 
-        res.status(200).json({ user: user, RoomstobookingUser: RoomstobookingUser })
+        // res.status(200).json({ user: user, RoomstobookingUser: RoomstobookingUser })
         // res.status(200).json(user)
     } catch (error) {
         console.log(error);
