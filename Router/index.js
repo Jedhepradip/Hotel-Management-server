@@ -7,6 +7,8 @@ import { generateToken } from "../Middlewares/generateToken.js"
 import bcrypt, { hash } from "bcrypt"
 import cookieParser from "cookie-parser"
 import contact from "../Model/contact.js"
+import nodemailer from "nodemailer"
+
 const router = express.Router()
 router.use(cookieParser())
 
@@ -29,7 +31,7 @@ router.post('/UserSendOtp', async (req, res) => {
     try {
         const { email, number } = req.body;
         console.log(req.body);
-        
+
         const user = await UserModel.findOne({ email: email });
         if (user) {
             return res.status(400).json({ message: "User already exist with this Email..." })
@@ -103,18 +105,18 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
             return res.status(400).json({ message: "Something is missing..." })
         }
 
-        const Emailexists = await UserData.findOne({ email: email })
+        const Emailexists = await UserModel.findOne({ email: email })
         if (Emailexists) {
             return res.status(400).json({ message: "User already exist with this email..." })
         }
 
-        const mobileexist = await UserData.findOne({ mobile: mobile })
+        const mobileexist = await UserModel.findOne({ mobile: mobile })
         if (mobileexist) {
             return res.status(400).json({ message: "User already exist with this mobile number..." })
         }
 
         const haspassword = await bcrypt.hash(password, 11)
-        const User = new UserData({
+        const User = new UserModel({
             ProfileImg: req.file?.originalname,
             name,
             email,
@@ -140,7 +142,7 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
 router.post("/User/Login", async (req, res) => {
     try {
         const { email, password } = req.body;
-        let Useremail = await UserData.findOne({ email })
+        let Useremail = await UserModel.findOne({ email })
 
         if (!Useremail) {
             return res.status(404).json({ message: "User not Found..." })
@@ -168,18 +170,18 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
     try {
         const userid = req.user.id
 
-        // const user = await UserModel.findById(userid)
+        const user = await UserModel.findById(userid)
 
-        // let Roomsid = user.Orders.Rooms
+        let Roomsid = user.Orders.Rooms
 
-        // let RoomstobookingUser = [];
-        // for (let index = 0; index < Roomsid.length; index++) {
-        //     let result = await RoomsData.findById(Roomsid[index].roomsid)
-        //     RoomstobookingUser.push(result)
-        // }
+        let RoomstobookingUser = [];
+        for (let index = 0; index < Roomsid.length; index++) {
+            let result = await RoomsData.findById(Roomsid[index].roomsid)
+            RoomstobookingUser.push(result)
+        }
 
-        // res.status(200).json({ user: user, RoomstobookingUser: RoomstobookingUser })
-        // res.status(200).json(user)
+        res.status(200).json({ user: user, RoomstobookingUser: RoomstobookingUser })
+        res.status(200).json(user)
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Internal Server Error" })
@@ -240,46 +242,6 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg')
         res.status(500).json({ Message: "internal server error" });
     }
 })
-
-// To Add The Rooms Data In Database 
-// router.post("/rooms/data/owner", async (req, res) => {
-//     try {
-//         // Expecting an array of rooms in the request body      
-//         const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
-//         console.log(req.body);
-
-
-//         // if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !thumbnail || !images || !country) {
-//         //     return res.status(400).json({ message: "all Filed is Required" })
-//         // }
-
-//         console.log(req.body);
-
-//         // Map over the array and create new room objects
-//         const newRooms = new RoomsData({
-//             title: title,
-//             description: description,
-//             price: price,
-//             discountPercentage: DiscountPercentage,
-//             discountPrice: DiscountPrice,
-//             location: location,
-//             thumbnail: thumbnail,
-//             images: images.map(image => ({ imgUrl: image })),
-//             country: country,
-//         });
-
-//         // Use the insertMany method to bulk insert the rooms
-//         const insertedRooms = await RoomsData.insertMany(newRooms);
-
-//         console.log(insertedRooms);
-
-
-//         res.status(200).json({ newRooms: insertedRooms });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ error: 'Internal Server Error' });
-//     }
-// });
 
 router.post("/rooms/data/owner", async (req, res) => {
     try {
