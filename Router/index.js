@@ -96,6 +96,8 @@ router.post('/UserSendOtp', async (req, res) => {
 router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) => {
     try {
         const { name, email, mobile, password } = req.body
+        console.log(req.body);
+        console.log(req.file);
 
         if (!req.file) {
             return res.status(400).json({ message: "Profile Img Not Found" });
@@ -171,7 +173,6 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
         const userid = req.user.id
 
         const user = await UserModel.findById(userid)
-
         let Roomsid = user.Orders.Rooms
 
         let RoomstobookingUser = [];
@@ -179,9 +180,8 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
             let result = await RoomsData.findById(Roomsid[index].roomsid)
             RoomstobookingUser.push(result)
         }
+        return res.status(200).json({ user, RoomstobookingUser })
 
-        res.status(200).json({ user: user, RoomstobookingUser: RoomstobookingUser })
-        res.status(200).json(user)
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Internal Server Error" })
@@ -231,7 +231,7 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg')
             user.ProfileImg = req.file.originalname
             user.save()
         } else {
-            user.ProfileImg = user.ProfilImg
+            user.ProfileImg = user.ProfileImg
         }
 
         const updatedUser = await UserModel.findByIdAndUpdate(userId, dataToUpdate, { new: true })

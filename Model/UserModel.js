@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 const UserModelData = new mongoose.Schema({
-    ProfilImg: {
+    ProfileImg: {
         type: String,
     },
     name: {
@@ -22,7 +22,7 @@ const UserModelData = new mongoose.Schema({
         type: String,
         require: true,
     },
-    // Rooms: [{ type: Schema.Types.ObjectId, ref: 'Rooms' }],
+    Rooms: [{ type: Schema.Types.ObjectId, ref: 'Rooms' }],
     Orders: {
         CardNumber: {
             type: Number,
