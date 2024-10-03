@@ -395,14 +395,12 @@ router.put("/Rooms/Removeto/AddtoCard/:removeroomsId", jwtAuthMiddleware, async 
 });
 
 // Like The Rooms 
-router.get("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
+router.put("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
     try {
         const UserId = req.user.id
         const RoomsId = req.params.RoomsId;
         const Rooms = await RoomsData.findById(RoomsId)
         const User = await UserModel.findById(UserId)
-
-        console.log("User likes :", User);
 
         if (!Rooms) {
             return res.status(400).json({ Message: "Rooms Not Found" })
@@ -411,13 +409,13 @@ router.get("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
 
         if (likess) {
             Rooms.likes = Rooms.likes.filter(like => like.like.toHexString() !== UserId)
+            User.Rooms = User.Rooms.filter(like => like.toHexString() !== Rooms._id.toHexString())
         } else {
             Rooms.likes.push({ like: UserId })
+            User.Rooms.push(Rooms._id)
         }
-
+        await User.save()
         let likesinrooms = await Rooms.save()
-
-        console.log("likesinrooms :", likesinrooms);
 
         Rooms.likes.map(like => like.like.toHexString());
         const Roomsall = await RoomsData.find()
