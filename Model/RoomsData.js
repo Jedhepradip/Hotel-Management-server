@@ -34,9 +34,9 @@ const RoomsSchema = new mongoose.Schema({
             ref: 'UserModel'
         }
     }],
-    Booked:{
+    Booked: {
         type: Boolean,
-        default:false
+        default: false
     }
 });
 

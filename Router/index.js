@@ -286,7 +286,6 @@ router.post("/rooms/data/owner", async (req, res) => {
     }
 });
 
-
 // To send The Rooms Data In The Frontend 
 router.get("/Product/data", async (req, res) => {
     try {
@@ -361,33 +360,52 @@ router.put("/User/Rooms/Payments/:RoomsId", jwtAuthMiddleware, async (req, res) 
 //     }
 // })
 
+//User Add To Card Rooms 
+router.put("/User/AddToCard/:RoomsId", jwtAuthMiddleware, async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.user.id)
+        const Rooms = await RoomsData.findById(req.params.RoomsId)
+        if (!user) {
+            return res.status(400).json({ message: "User Not Found" })
+        }
+        if (!Rooms) {
+            return res.status(400).json({ message: "Rooms Not Found" })
+        }
+        if (user) {
+            user.AddToCardRooms.push(Rooms._id)
+            user.save()
+        }
+        return res.status(200).json({ message: "Rooms Aded To add To Card..." })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
+})
 //Remove Rooms To Add To Card
 router.put("/Rooms/Removeto/AddtoCard/:removeroomsId", jwtAuthMiddleware, async (req, res) => {
     try {
         const UserId = req.user.id;
         const RoomsId = req.params.removeroomsId;
-
-        // Find the user by ID
         let user = await UserModel.findById(UserId);
-
         if (!user) {
             return res.status(404).json({ Message: "User not found" });
         }
+        const Rooms = await RoomsData.findById(RoomsId)
+        if (!Rooms) {
+            return res.status(404).json({ Message: "Rooms not found" });
+        }
+        console.log(user);
+        const Remove = user?.AddToCardRooms.filter((e) => e._id.toHexString() !== Rooms._id.toHexString())
+        console.log(Remove);
+        await user.save()
+        console.log(user);
 
-        // Filter out the room ID from user's Orders.default array
-        user.Orders.Rooms = user.Orders.Rooms.filter(id => id.roomsid !== RoomsId);
-
-        // Save the updated user document
-        let Rooms = await RoomsData.findById(RoomsId)
-
-        Rooms.Booked = false
-
-        Rooms.save()
-        let updatedUser = await user.save();
-
-        // Respond with the updated user (optional)
-        res.json(updatedUser);
-
+        // user.Orders.Rooms = user.Orders.Rooms.filter(id => id.roomsid !== RoomsId);
+        // let Rooms = await RoomsData.findById(RoomsId)
+        // Rooms.Booked = false
+        // Rooms.save()
+        // let updatedUser = await user.save();
+        // res.json(updatedUser);
     } catch (error) {
         console.log(error);
         return res.status(500).json({ Message: "Internal Server Error" });

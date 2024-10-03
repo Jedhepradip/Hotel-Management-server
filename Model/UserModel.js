@@ -23,6 +23,7 @@ const UserModelData = new mongoose.Schema({
         require: true,
     },
     Rooms: [{ type: Schema.Types.ObjectId, ref: 'Rooms' }],
+    AddToCardRooms: [{ type: Schema.Types.ObjectId, ref: "Rooms" }],
     Orders: {
         CardNumber: {
             type: Number,
