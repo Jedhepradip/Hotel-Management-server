@@ -145,7 +145,7 @@ router.post("/User/Login", async (req, res) => {
     try {
         const { email, password } = req.body;
         let Useremail = await UserModel.findOne({ email })
-
+        console.log(req.body);
         if (!Useremail) {
             return res.status(404).json({ message: "User not Found..." })
         }
@@ -195,10 +195,11 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg')
         const user = await UserModel.findById(userId);
         if (!user) return res.status(404).json({ Message: "user not found" });
         const dataToUpdate = req.body;
-        const { name, email, mobile, password, } = req.body;
+        const { name, email, mobile } = req.body;
+        console.log(req.body);
 
         if (email) {
-            const EmailCheck = await UserData.findOne({ email })
+            const EmailCheck = await UserModel.findOne({ email })
             if (EmailCheck) {
                 if (!(EmailCheck.email == user.email)) {
                     return res.status(400).json({ message: "Email already exists" });
@@ -207,7 +208,7 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg')
         }
 
         if (mobile) {
-            const MobileCheck = await UserData.findOne({ mobile })
+            const MobileCheck = await UserModel.findOne({ mobile })
             if (MobileCheck) {
                 if (!(MobileCheck.mobile == user.mobile)) {
                     return res.status(400).json({ message: "Mobile Number already exists" });
@@ -215,17 +216,17 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg')
             }
         }
 
-        if (dataToUpdate.password) {
-            try {
-                const saltRounds = 11;
-                const hashedPassword = await bcrypt.hash(dataToUpdate.password, saltRounds);
-                dataToUpdate.password = hashedPassword;
-            } catch (error) {
-                console.error(error);
-            }
-        } else {
-            dataToUpdate.password = user.password;
-        }
+        // if (dataToUpdate.password) {
+        //     try {
+        //         const saltRounds = 11;
+        //         const hashedPassword = await bcrypt.hash(dataToUpdate.password, saltRounds);
+        //         dataToUpdate.password = hashedPassword;
+        //     } catch (error) {
+        //         console.error(error);
+        //     }
+        // } else {
+        //     dataToUpdate.password = user.password;
+        // }
 
         if (req.file) {
             user.ProfileImg = req.file.originalname
@@ -371,6 +372,14 @@ router.put("/User/AddToCard/:RoomsId", jwtAuthMiddleware, async (req, res) => {
         if (!Rooms) {
             return res.status(400).json({ message: "Rooms Not Found" })
         }
+        const RoomsAllredyExist = user.AddToCardRooms.filter(
+            (e) => e._id.toString() == Rooms._id.toString()
+        );
+
+        if (RoomsAllredyExist.length > 0) {
+            return res.status(400).json({ message: "This room has already been added to your cart!" })
+        }
+
         if (user) {
             user.AddToCardRooms.push(Rooms._id)
             user.save()
@@ -386,30 +395,39 @@ router.put("/Rooms/Removeto/AddtoCard/:removeroomsId", jwtAuthMiddleware, async 
     try {
         const UserId = req.user.id;
         const RoomsId = req.params.removeroomsId;
+
+        // Find the user by their ID
         let user = await UserModel.findById(UserId);
         if (!user) {
             return res.status(404).json({ Message: "User not found" });
         }
-        const Rooms = await RoomsData.findById(RoomsId)
-        if (!Rooms) {
-            return res.status(404).json({ Message: "Rooms not found" });
+
+        // Find the room by its ID
+        const room = await RoomsData.findById(RoomsId);
+        if (!room) {
+            return res.status(404).json({ Message: "Room not found" });
         }
-        console.log(user);
-        const Remove = user?.AddToCardRooms.filter((e) => e._id.toHexString() !== Rooms._id.toHexString())
-        console.log(Remove);
-        await user.save()
+
+        // Filter out the room from AddToCardRooms array
+        user.AddToCardRooms = user.AddToCardRooms.filter(
+            (e) => e._id.toString() !== room._id.toString()
+        );
+
+        // Save the updated user object
+        await user.save();
+
+        // Optionally, update room booking status (if needed)
+        room.Booked = false;
+        await room.save();
         console.log(user);
 
-        // user.Orders.Rooms = user.Orders.Rooms.filter(id => id.roomsid !== RoomsId);
-        // let Rooms = await RoomsData.findById(RoomsId)
-        // Rooms.Booked = false
-        // Rooms.save()
-        // let updatedUser = await user.save();
-        // res.json(updatedUser);
+        // Return the updated user data
+        return res.json({ Message: "Room removed successfully", user });
     } catch (error) {
-        console.log(error);
+        console.error(error);
         return res.status(500).json({ Message: "Internal Server Error" });
     }
+
 });
 
 // Like The Rooms 
@@ -469,20 +487,52 @@ router.post("/User/Contact", async (req, res) => {
 })
 
 // Forgot Password to User
-router.post("/User/ForgotPassword/:Phone", async (req, res) => {
+router.post("/ForgetPassword", async (req, res) => {
     try {
+        const { email } = req.body;
+        const EmailCheck = await UserModel.findOne({ email })
 
-        let Phone = req.params.Phone
-        console.log(Phone);
-        if (!Phone) {
-            return res.status(400).json({ Message: "Filed Is Required" })
-        }
-        const User = await UserModel.findOne({ Phone: Phone })
+        // Generate a 4-digit OTP
+        const otp = Math.floor(1000 + Math.random() * 9000);
 
-        if (!User) {
-            return res.status(401).json({ Message: "User Not Found" })
-        }
-        return res.status(200).json(User._id)
+        // Set up the email transporter
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            secure: true,
+            port: Number(process.env.NODEMAILER_PORT) || 465,
+            auth: {
+                user: process.env.USER,
+                pass: process.env.PASS,
+            },
+        });
+
+        // Send OTP email
+        const info = await transporter.sendMail({
+            from: process.env.FROM,
+            to: email, // Send the email to the user
+            subject: "Sign In Confirmation & OTP Verification", // Subject line
+            text: `Your OTP is ${otp}`, // Fallback text
+            html: `
+               <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: black; text-align:center;">Hello Confirmation & OTP Verification </h2>
+            <p>We noticed a successful sign-in to your account from a new device or location. For your security, we require additional verification before you can continue.</p>
+            <p>Please use the following One-Time Password (OTP) to verify your identity:</p>
+            <div style="background-color: #f4f4f4; padding: 10px 20px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-align: center; max-width: 200px; margin: auto;">
+                ${otp}
+            </div>
+            <p style="margin-top: 20px;">The OTP is valid for the next 10 minutes. If you did not request this verification, please ignore this email or contact our support team immediately.</p>
+            <h3 style="margin-top: 30px; color: #333;">Sign In Details:</h3>
+            <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px;">
+                <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                <p><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+            </div>
+            <p style="margin-top: 30px;">Thank you for using our service. We are committed to keeping your account secure.</p>
+            <p>Best regards, <br/> The Support Team</p>
+            <p style="font-size: 12px; color: #888; margin-top: 20px;">If you did not sign in or request this OTP, please contact us immediately at support@yourcompany.com.</p>
+        </div>
+             `,
+        });
+        return res.status(200).json({ message: "OTP sent successfully Check Your Email... ", otp, EmailCheck });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ Message: "Internal Server Error" })
@@ -490,26 +540,29 @@ router.post("/User/ForgotPassword/:Phone", async (req, res) => {
 })
 
 //Create New Password to the login
-router.post("/Createpassword/:UserId", async (req, res) => {
+router.post("/Createpassword/:id", async (req, res) => {
     try {
-        const UserId = req.params.UserId;
-        const { Password, CPassword } = req.body;
-        console.log("req.body:", req.body);
+        const { Password } = req.body;
+        const userId = req.params.id;
 
-        if (!Password || !CPassword) {
-            return res.status(400).json({ Message: "All Fields Are Required..." });
+
+        if (!Password) {
+            return res.status(400).json({ message: "Password is missing." });
         }
 
-        if (Password === CPassword) {
-            const PasswordHash = await bcrypt.hash(Password, 11);
-            const User = await UserModel.findByIdAndUpdate(UserId, { Password: PasswordHash }, { new: true }).select("Password");
-            console.log("User:", User);
-            return res.status(200).json({ Message: "Password Updated Successfully", User });
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
         }
-        return res.status(400).json({ Message: "Passwords Don't Match..." });
+
+        const hashedPassword = await bcrypt.hash(Password, 11);
+        const userpasswordupdated = await UserModel.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true })
+        user.password = hashedPassword;
+        await user.save();
+        return res.status(200).json({ message: "Password updated successfully." });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({ Message: "Server Error" });
+        console.error("Error updating password:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
