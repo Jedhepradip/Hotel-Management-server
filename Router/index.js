@@ -8,6 +8,10 @@ import bcrypt, { hash } from "bcrypt"
 import cookieParser from "cookie-parser"
 import contact from "../Model/contact.js"
 import nodemailer from "nodemailer"
+import razorpay from "razorpay"
+import { sign } from "jsonwebtoken"
+import payments from "razorpay/dist/types/payments.js"
+import Payments from "../Model/Payments.js"
 
 const router = express.Router()
 router.use(cookieParser())
@@ -22,9 +26,61 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage: storage });
 
+const rezorpayInstance = new razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_SECRET,
+})
+
 //to check the server ranning
 router.get("/", (req, res) => {
     res.send("Hello World")
+})
+
+router.post("/Payments", async (req, res) => {
+    try {
+        const { amounts } = req.body
+        const options = {
+            amounts: Number(amounts * 100),
+            currency: "INR",
+            receipt: crypto.randomBytes(10).toString("hex"),
+        }
+        rezorpayInstance.orders.create(options, (error, order) => {
+            if (error) {
+                console.log(error);
+                return res.status(500).json({ message: "Something Went Wrong!" })
+            }
+            console.log(order);
+            return res.status(200).json({ data: order })
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server error" })
+    }
+})
+
+router.post('/verify-payment', async (req, res) => {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+        const sign = razorpay_order_id + "|" + razorpay_payment_id
+        const expectedSign = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).upload(sign.toString()).digest("hex")
+
+        const isAuthentice = expectedSign == razorpay_signature
+        console.log(isAuthentice);
+        if (isAuthentice) {
+            const payment = new Payments({
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature,
+            })
+            await payment.save();
+            return res.status(200).json({message:"Payments successfully"})
+        }
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
 })
 
 router.post('/UserSendOtp', async (req, res) => {
