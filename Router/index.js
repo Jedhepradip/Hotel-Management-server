@@ -8,10 +8,10 @@ import bcrypt, { hash } from "bcrypt"
 import cookieParser from "cookie-parser"
 import contact from "../Model/contact.js"
 import nodemailer from "nodemailer"
-import razorpay from "razorpay"
-import { sign } from "jsonwebtoken"
-import payments from "razorpay/dist/types/payments.js"
-import Payments from "../Model/Payments.js"
+import { use } from "bcrypt/promises.js"
+// import razorpay from "razorpay"
+// import payments from "razorpay/dist/types/payments.js"
+// import Payments from "../Model/Payments.js"
 
 const router = express.Router()
 router.use(cookieParser())
@@ -26,62 +26,62 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage: storage });
 
-const rezorpayInstance = new razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_SECRET,
-})
+// const rezorpayInstance = new razorpay({
+//     key_id: process.env.RAZORPAY_KEY_ID,
+//     key_secret: process.env.RAZORPAY_SECRET,
+// })
 
 //to check the server ranning
 router.get("/", (req, res) => {
     res.send("Hello World")
 })
 
-router.post("/Payments", async (req, res) => {
-    try {
-        const { amounts } = req.body
-        const options = {
-            amounts: Number(amounts * 100),
-            currency: "INR",
-            receipt: crypto.randomBytes(10).toString("hex"),
-        }
-        rezorpayInstance.orders.create(options, (error, order) => {
-            if (error) {
-                console.log(error);
-                return res.status(500).json({ message: "Something Went Wrong!" })
-            }
-            console.log(order);
-            return res.status(200).json({ data: order })
-        })
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Internal Server error" })
-    }
-})
+// router.post("/Payments", async (req, res) => {
+//     try {
+//         const { amounts } = req.body
+//         const options = {
+//             amounts: Number(amounts * 100),
+//             currency: "INR",
+//             receipt: crypto.randomBytes(10).toString("hex"),
+//         }
+//         rezorpayInstance.orders.create(options, (error, order) => {
+//             if (error) {
+//                 console.log(error);
+//                 return res.status(500).json({ message: "Something Went Wrong!" })
+//             }
+//             console.log(order);
+//             return res.status(200).json({ data: order })
+//         })
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({ message: "Internal Server error" })
+//     }
+// })
 
-router.post('/verify-payment', async (req, res) => {
-    try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+// router.post('/verify-payment', async (req, res) => {
+//     try {
+//         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-        const sign = razorpay_order_id + "|" + razorpay_payment_id
-        const expectedSign = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).upload(sign.toString()).digest("hex")
+//         const sign = razorpay_order_id + "|" + razorpay_payment_id
+//         const expectedSign = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).upload(sign.toString()).digest("hex")
 
-        const isAuthentice = expectedSign == razorpay_signature
-        console.log(isAuthentice);
-        if (isAuthentice) {
-            const payment = new Payments({
-                razorpay_order_id,
-                razorpay_payment_id,
-                razorpay_signature,
-            })
-            await payment.save();
-            return res.status(200).json({message:"Payments successfully"})
-        }
+//         const isAuthentice = expectedSign == razorpay_signature
+//         console.log(isAuthentice);
+//         if (isAuthentice) {
+//             const payment = new Payments({
+//                 razorpay_order_id,
+//                 razorpay_payment_id,
+//                 razorpay_signature,
+//             })
+//             await payment.save();
+//             return res.status(200).json({message:"Payments successfully"})
+//         }
 
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Internal Server Error" })
-    }
-})
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({ message: "Internal Server Error" })
+//     }
+// })
 
 router.post('/UserSendOtp', async (req, res) => {
     try {
@@ -153,7 +153,6 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
     try {
         const { name, email, mobile, password } = req.body
         console.log(req.body);
-        console.log(req.file);
 
         if (!req.file) {
             return res.status(400).json({ message: "Profile Img Not Found" });
@@ -174,7 +173,7 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
         }
 
         const haspassword = await bcrypt.hash(password, 11)
-        const User = new UserModel({
+        const UserData = new UserModel({
             ProfileImg: req.file?.originalname,
             name,
             email,
@@ -182,15 +181,26 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
             password: haspassword,
         })
 
-        await User.save()
+        await UserData.save()
         const payload = {
-            id: User.id,
-            email: User.email,
-            name: User.name,
+            id: UserData.id,
+            email: UserData.email,
+            name: UserData.name,
         };
+
+        const isAdminData = await UserModel.findById(UserData.id);
+        if (isAdminData) {
+            if (isAdminData.email === "pradipjedhe69@gmail.com") {
+                isAdminData.isAdmin = true;
+                await isAdminData.save();
+            } else {
+                isAdminData.isAdmin = false;
+                await isAdminData.save();
+            }
+        }
+
         const token = generateToken(payload)
         return res.status(200).json({ message: "Registration Successful..", token, User })
-
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Internal server Error" })

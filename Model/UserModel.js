@@ -6,7 +6,6 @@ const UserModelData = new mongoose.Schema({
     },
     name: {
         type: String,
-        require: true,
     },
     email: {
         type: String,
@@ -21,6 +20,10 @@ const UserModelData = new mongoose.Schema({
     password: {
         type: String,
         require: true,
+    },
+    isAdmin: {
+        type: String,
+        default: false
     },
     Rooms: [{ type: Schema.Types.ObjectId, ref: 'Rooms' }],
     AddToCardRooms: [{ type: Schema.Types.ObjectId, ref: "Rooms" }],
