@@ -8,10 +8,6 @@ import bcrypt, { hash } from "bcrypt"
 import cookieParser from "cookie-parser"
 import contact from "../Model/contact.js"
 import nodemailer from "nodemailer"
-import { use } from "bcrypt/promises.js"
-// import razorpay from "razorpay"
-// import payments from "razorpay/dist/types/payments.js"
-// import Payments from "../Model/Payments.js"
 
 const router = express.Router()
 router.use(cookieParser())
@@ -26,62 +22,10 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage: storage });
 
-// const rezorpayInstance = new razorpay({
-//     key_id: process.env.RAZORPAY_KEY_ID,
-//     key_secret: process.env.RAZORPAY_SECRET,
-// })
-
 //to check the server ranning
 router.get("/", (req, res) => {
     res.send("Hello World")
 })
-
-// router.post("/Payments", async (req, res) => {
-//     try {
-//         const { amounts } = req.body
-//         const options = {
-//             amounts: Number(amounts * 100),
-//             currency: "INR",
-//             receipt: crypto.randomBytes(10).toString("hex"),
-//         }
-//         rezorpayInstance.orders.create(options, (error, order) => {
-//             if (error) {
-//                 console.log(error);
-//                 return res.status(500).json({ message: "Something Went Wrong!" })
-//             }
-//             console.log(order);
-//             return res.status(200).json({ data: order })
-//         })
-//     } catch (error) {
-//         console.log(error);
-//         return res.status(500).json({ message: "Internal Server error" })
-//     }
-// })
-
-// router.post('/verify-payment', async (req, res) => {
-//     try {
-//         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-//         const sign = razorpay_order_id + "|" + razorpay_payment_id
-//         const expectedSign = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).upload(sign.toString()).digest("hex")
-
-//         const isAuthentice = expectedSign == razorpay_signature
-//         console.log(isAuthentice);
-//         if (isAuthentice) {
-//             const payment = new Payments({
-//                 razorpay_order_id,
-//                 razorpay_payment_id,
-//                 razorpay_signature,
-//             })
-//             await payment.save();
-//             return res.status(200).json({message:"Payments successfully"})
-//         }
-
-//     } catch (error) {
-//         console.log(error);
-//         return res.status(500).json({ message: "Internal Server Error" })
-//     }
-// })
 
 // router.post('/UserSendOtp', async (req, res) => {
 //     try {
@@ -120,24 +64,24 @@ router.get("/", (req, res) => {
 //                <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
 //                 <h2 style="color: black; text-aling:center;">Hello Confirmation & OTP Verification </h2>
 //                 <p>We noticed a successful sign-in to your account from a new device or location. For your security, we require additional verification before you can continue.</p>
-                
+
 //                 <p>Please use the following One-Time Password (OTP) to verify your identity:</p>
 //                 <div style="background-color: #f4f4f4; padding: 10px 20px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-align: center; max-width: 200px; margin: auto;">
 //                     ${otp}
 //                 </div>
-                
+
 //                 <p style="margin-top: 20px;">The OTP is valid for the next 10 minutes. If you did not request this verification, please ignore this email or contact our support team immediately.</p>
-                
+
 //                 <h3 style="margin-top: 30px; color: #333;">Sign In Details:</h3>
 //                 <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px;">
 //                     <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
 //                     <p><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
 //                 </div>
-                
+
 //                 <p style="margin-top: 30px;">Thank you for using our service. We are committed to keeping your account secure.</p>
-                
+
 //                 <p>Best regards, <br/> The Support Team</p>
-                
+
 //                 <p style="font-size: 12px; color: #888; margin-top: 20px;">If you did not sign in or request this OTP, please contact us immediately at support@yourcompany.com.</p>
 //             </div>
 //             `,
@@ -474,6 +418,11 @@ router.put("/User/Rooms/Payments/:RoomsId", jwtAuthMiddleware, async (req, res) 
     }
 })
 
+router.post("/create-payment-intent", async (req, res) => {
+    console.log("req.body :", req.body);
+})
+
+
 //to send the data to the Frontend
 // router.get("/Patments/Rooms/data", jwtAuthMiddleware, async (req, res) => {
 //     try {
@@ -699,5 +648,6 @@ router.post("/Createpassword/:id", async (req, res) => {
         return res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
 
 export default router
