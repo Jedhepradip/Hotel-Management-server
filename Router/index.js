@@ -418,9 +418,52 @@ router.put("/User/Rooms/Payments/:RoomsId", jwtAuthMiddleware, async (req, res) 
     }
 })
 
-router.post("/create-payment-intent", async (req, res) => {
-    console.log("req.body :", req.body);
-})
+
+// Create a payment intent
+router.post('/api/create-payment-intent', jwtAuthMiddleware, async (req, res) => {
+    const { amount, courseId } = req.body;
+    console.log(req.body);
+    try {
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount), // Amount in smallest currency unit (e.g., paise)
+            currency: 'inr',
+            payment_method_types: ['card'],
+            metadata: { courseId }, // Attach metadata to track which course the payment is for
+        });
+        const user = await UserModel.findById(req.user?.id);
+        user?.courses.push(courseId)
+        await user?.save();
+
+        //store Enrolled student in course 
+        const course = await RoomsData.findById(courseId);
+
+        course?.enrollments.push(user?.id);
+        await course?.save();
+
+        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+        console.error('Error creating payment intent:', error);
+        res.status(500).json({ error: 'Unable to create payment intent' });
+    }
+});
+
+router.post('/api/instructor/create-payment-intent', async (req, res) => {
+    const { amount, description } = req.body;
+
+    try {
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount), // Amount in smallest currency unit (e.g., paise)
+            currency: 'inr',
+            payment_method_types: ['card'],
+            metadata: { description }, // Attach metadata to track which course the payment is for
+        });
+
+        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+        console.error('Error creating payment intent:', error);
+        res.status(500).json({ error: 'Unable to create payment intent' });
+    }
+});
 
 
 //to send the data to the Frontend
