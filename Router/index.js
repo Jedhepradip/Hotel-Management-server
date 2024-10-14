@@ -430,15 +430,15 @@ router.post('/api/create-payment-intent', jwtAuthMiddleware, async (req, res) =>
             payment_method_types: ['card'],
             metadata: { courseId }, // Attach metadata to track which course the payment is for
         });
-        const user = await UserModel.findById(req.user?.id);
-        user?.courses.push(courseId)
-        await user?.save();
+        // const user = await UserModel.findById(req.user?.id);
+        // user?.courses.push(courseId)
+        // await user?.save();
 
         //store Enrolled student in course 
-        const course = await RoomsData.findById(courseId);
+        // const course = await RoomsData.findById(courseId);
 
-        course?.enrollments.push(user?.id);
-        await course?.save();
+        // course?.enrollments.push(user?.id);
+        // await course?.save();
 
         res.status(200).json({ clientSecret: paymentIntent.client_secret });
     } catch (error) {
