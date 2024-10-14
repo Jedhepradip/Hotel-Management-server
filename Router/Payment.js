@@ -51,10 +51,10 @@ router.post('/api/create-payment-intent', jwtAuthMiddleware, async (req, res) =>
         // Check if user is already enrolled in the room
         const isAlreadyEnrolled = user?.PaymentRooms.includes(RoomsId);
 
-        // if (isAlreadyEnrolled) {
-        //     console.log("alredy have payment this rooms ");
-        //     return res.status(400).json({ message: 'User already Payment in this room' });
-        // }
+        if (isAlreadyEnrolled) {
+            console.log("alredy have payment this rooms ");
+            return res.status(400).json({ message: 'User already Payment in this room' });
+        }
 
         // Enroll the user in the room
         user.PaymentRooms.push(RoomsId);

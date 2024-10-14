@@ -39,6 +39,8 @@ const RoomsSchema = new mongoose.Schema({
         default: false
     },
     UserPayment: [{ type: mongoose.Schema.Types.ObjectId, ref: 'UserModel' }],
+}, {
+    timestamps: true // Correct placement of timestamps
 });
 
 export default mongoose.model("Rooms", RoomsSchema);
