@@ -12,10 +12,14 @@ const PayemntSchema = new mongoose.Schema({
     amount: {
         type: String,
         required: true
-    },
-    title: {
-        type: String,
-        required: true
+    },  
+    userId:{
+        type:String,
+        required:true
+    } ,
+    RoomsId:{
+        type:String,
+        required:true
     },
     data: {
         type: Date,
