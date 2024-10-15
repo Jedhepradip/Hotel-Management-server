@@ -192,10 +192,25 @@ router.get("/Profile/User/Data", jwtAuthMiddleware, async (req, res) => {
     }
 })
 
-// User Profile Eidit
-router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg'), async (req, res) => {
+router.get("/Admin/AllUser/Send", jwtAuthMiddleware, async (req, res) => {
     try {
-        const userId = req.user.id;
+        const user = req?.user?.id
+        const UserData = await UserModel.findById(user)
+        if (!UserData) {
+            return res.status(400).json({ message: "User Not Found..." })
+        }
+        const Alluser = await UserModel.find()
+        return res.status(200).json(Alluser)
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal server Error" })
+    }
+})
+// User Profile Eidit
+router.put("/Eidit/User/Profile/:id", jwtAuthMiddleware, upload.single('ProfileImg'), async (req, res) => {
+    try {
+        const userId = req?.params?.id;
+        console.log(userId);        
         const user = await UserModel.findById(userId);
         if (!user) return res.status(404).json({ Message: "user not found" });
         const dataToUpdate = req.body;
@@ -220,11 +235,14 @@ router.put("/Eidit/User/Profile", jwtAuthMiddleware, upload.single('ProfileImg')
             }
         }
 
+        console.log(user);
+        
         if (req.file) {
             user.ProfileImg = req.file.originalname
             user.save()
         } else {
             user.ProfileImg = user.ProfileImg
+            user.save()
         }
 
         const updatedUser = await UserModel.findByIdAndUpdate(userId, dataToUpdate, { new: true })
