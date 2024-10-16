@@ -297,21 +297,21 @@ router.delete("/Admin/Delete/User/:id", jwtAuthMiddleware, async (req, res) => {
 });
 
 
-
-router.post("/rooms/data/owner", upload.single('ProfileImg'), async (req, res) => {
+router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 3 }]), async (req, res) => {
     try {
         // Expecting an array of rooms in the request body      
         const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
-        // Validate required fields
-        if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !thumbnail || !images || !country) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
+        console.log(req.body);
 
-        // Check if 'images' is an array before attempting to map
-        if (!Array.isArray(images)) {
+        if (!(req.files.thumbnail && req.files.images)) {
+
             return res.status(400).json({ message: "'images' must be an array" });
         }
 
+        // Validate required fields
+        if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !country) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
         // Create a new room object
         const newRooms = new RoomsData({
             title: title,
@@ -320,13 +320,13 @@ router.post("/rooms/data/owner", upload.single('ProfileImg'), async (req, res) =
             discountPercentage: DiscountPercentage,
             discountPrice: DiscountPrice,
             location: location,
-            thumbnail: thumbnail,
-            images: images.map(image => ({ imgUrl: image })),  // Mapping over images
+            thumbnail: req?.files?.thumbnail?.originalname,
+            images: req.files.images.map(image => ({ imgUrl: image.originalname })),  // Mapping over images
             country: country,
         });
-
         // Insert the new room data
         const insertedRooms = await RoomsData.insertMany(newRooms);
+
         // Respond with the inserted room data
         res.status(200).json({ newRooms: insertedRooms });
     } catch (error) {
