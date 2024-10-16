@@ -206,55 +206,99 @@ router.get("/Admin/AllUser/Send", jwtAuthMiddleware, async (req, res) => {
         return res.status(500).json({ message: "Internal server Error" })
     }
 })
-// User Profile Eidit
+
+//User Edit to Use Admin or Student
 router.put("/Eidit/User/Profile/:id", jwtAuthMiddleware, upload.single('ProfileImg'), async (req, res) => {
     try {
-        const userId = req?.params?.id;
-        console.log(userId);        
+        const userId = req.params.id;
         const user = await UserModel.findById(userId);
-        if (!user) return res.status(404).json({ Message: "user not found" });
-        const dataToUpdate = req.body;
+        if (!user) return res.status(404).json({ Message: "User not found" });
+
         const { name, email, mobile } = req.body;
-        console.log(req.body);
 
+        // Check for duplicate email
         if (email) {
-            const EmailCheck = await UserModel.findOne({ email })
-            if (EmailCheck) {
-                if (!(EmailCheck.email == user.email)) {
-                    return res.status(400).json({ message: "Email already exists" });
-                }
+            const emailCheck = await UserModel.findOne({ email });
+            if (emailCheck && emailCheck._id.toString() !== userId) {
+                return res.status(400).json({ message: "Email already exists" });
             }
         }
 
+        // Check for duplicate mobile number
         if (mobile) {
-            const MobileCheck = await UserModel.findOne({ mobile })
-            if (MobileCheck) {
-                if (!(MobileCheck.mobile == user.mobile)) {
-                    return res.status(400).json({ message: "Mobile Number already exists" });
-                }
+            const mobileCheck = await UserModel.findOne({ mobile });
+            if (mobileCheck && mobileCheck._id.toString() !== userId) {
+                return res.status(400).json({ message: "Mobile Number already exists" });
             }
         }
 
-        console.log(user);
-        
+        // Update user details
+        user.name = name || user.name;
+        user.email = email || user.email;
+        user.mobile = mobile || user.mobile;
+
+        // Handle profile image upload
         if (req.file) {
-            user.ProfileImg = req.file.originalname
-            user.save()
-        } else {
-            user.ProfileImg = user.ProfileImg
-            user.save()
+            user.ProfileImg = req.file.originalname;
         }
 
-        const updatedUser = await UserModel.findByIdAndUpdate(userId, dataToUpdate, { new: true })
-        res.status(200).json({ updatedUser })
+        // if (email) {
+        //     const EmailCheck = await UserModel.findOne({ email })
+        //     if (EmailCheck) {
+        //         if (!(EmailCheck.email == user.email)) {
+        //             return res.status(400).json({ message: "Email already exists" });
+        //         }
+        //     }
+        //     await user.save()
+        // }
+
+        // if (mobile) {
+        //     const MobileCheck = await UserModel.findOne({ mobile })
+        //     if (MobileCheck) {
+        //         if (!(MobileCheck.mobile == user.mobile)) {
+        //             return res.status(400).json({ message: "Mobile Number already exists" });
+        //         }
+        //     }
+        //     await user.save()
+        // }
+
+        const updatedUser = await user.save();
+        res.status(200).json({ updatedUser });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ Message: "Internal server error" });
+    }
+});
+
+//Admin The Delete The User 
+router.delete("/Admin/Delete/User/:id", jwtAuthMiddleware, async (req, res) => {
+    try {
+        const UserId = req.params.id;
+
+        // Check if the user exists
+        const user = await UserModel.findById(UserId);
+        if (!user) {
+            return res.status(404).json({ message: "User Not Found..." }); // Use 404 for not found
+        }
+
+        // Delete the user
+        const deletedUser = await UserModel.findByIdAndDelete(UserId);
+        if (!deletedUser) {
+            return res.status(500).json({ message: "Error deleting user." });
+        }
+
+        // Optionally return the deleted user data
+        return res.status(200).json({ message: "User deleted successfully." });
 
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ Message: "internal server error" });
+        console.error(error); // Changed to console.error for better visibility
+        return res.status(500).json({ message: "Internal Server Error..." });
     }
-})
+});
 
-router.post("/rooms/data/owner", async (req, res) => {
+
+
+router.post("/rooms/data/owner", upload.single('ProfileImg'), async (req, res) => {
     try {
         // Expecting an array of rooms in the request body      
         const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
