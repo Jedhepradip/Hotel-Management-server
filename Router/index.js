@@ -297,7 +297,7 @@ router.delete("/Admin/Delete/User/:id", jwtAuthMiddleware, async (req, res) => {
 });
 
 
-router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 3 }]), async (req, res) => {
+router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
     try {
         // Expecting an array of rooms in the request body      
         const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
@@ -312,6 +312,8 @@ router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1
         if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !country) {
             return res.status(400).json({ message: "All fields are required" });
         }
+        console.log("thumbnail :", req.files.thumbnail[0].originalname);
+
         // Create a new room object
         const newRooms = new RoomsData({
             title: title,
@@ -320,7 +322,7 @@ router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1
             discountPercentage: DiscountPercentage,
             discountPrice: DiscountPrice,
             location: location,
-            thumbnail: req?.files?.thumbnail?.originalname,
+            thumbnail: req?.files?.thumbnail[0]?.originalname,
             images: req.files.images.map(image => ({ imgUrl: image.originalname })),  // Mapping over images
             country: country,
         });
@@ -334,6 +336,55 @@ router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
+router.post("/Admin/Edit/Rooms/:id", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
+    try {
+        const CardId = req.params.id
+        const { title, description, price, DiscountPercentage, DiscountPrice, location, country } = req.body;
+        const Card = await RoomsData.findById(CardId)
+        if (!Card) {
+            return res.status(400).json({ message: "Rooms Not Fount..." })
+        }
+        Card.title = title || Card.title;
+        Card.description = description || Card.description;
+        Card.price = price || Card.price;
+        Card.discountPercentage = DiscountPercentage || Card.discountPercentage;
+        Card.discountPrice = DiscountPrice || Card.discountPrice;
+        Card.location = location || Card.location;
+        Card.country = country || Card.country;
+        // Handle profile image upload
+        if (req.file.thumbnail) {
+            Card.thumbnail = req?.file?.thumbnail[0]?.originalname;
+        }
+        if (req.file.images) {
+            Card.images = req.files.images.map(image => ({ imgUrl: image.originalname })) // Mapping over images
+        }
+
+        await Card.save()
+        return res.status(200).json({ message: "Card Updated successfully" })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
+})
+//Rooms Delete For The Admin
+router.delete("/Rooms/Delete/Admin/:id", jwtAuthMiddleware, async (req, res) => {
+    try {
+        const Card = req?.params?.id
+        const Rooms = await RoomsData.findById(Card)
+        if (!Rooms) {
+            return res.status(400).json({ message: "Rooms Not Found" })
+        }
+        const deletedCard = await RoomsData.findByIdAndDelete(Card);
+        if (!deletedCard) {
+            return res.status(500).json({ message: "Error deleting user." });
+        }
+        return res.status(200).json({ message: "Rooms deleted successfully." });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error..." })
+    }
+})
 
 // To send The Rooms Data In The Frontend 
 router.get("/Product/data", async (req, res) => {
