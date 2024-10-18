@@ -9,7 +9,6 @@ import bcrypt, { hash } from "bcrypt"
 import cookieParser from "cookie-parser"
 import contact from "../Model/contact.js"
 import nodemailer from "nodemailer"
-
 const router = express.Router()
 router.use(cookieParser())
 
@@ -22,7 +21,6 @@ const storage = multer.diskStorage({
     }
 })
 const upload = multer({ storage: storage });
-
 //to check the server ranning
 router.get("/", (req, res) => {
     res.send("Hello World")
@@ -31,21 +29,16 @@ router.get("/", (req, res) => {
 router.post('/UserSendOtp', async (req, res) => {
     try {
         const { email, number } = req.body;
-        console.log(req.body);
-
         const user = await UserModel.findOne({ email: email });
         if (user) {
             return res.status(400).json({ message: "User already exists with this Email..." });
         }
-
         const MobileNum = await UserModel.findOne({ mobile: number }); // Ensure consistency with 'number' and 'mobile'
         if (MobileNum) {
             return res.status(400).json({ message: "User already exists with this Number..." });
         }
-
         // Generate a 4-digit OTP
         const otp = Math.floor(1000 + Math.random() * 9000);
-
         // Set up the email transporter
         const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
@@ -56,7 +49,6 @@ router.post('/UserSendOtp', async (req, res) => {
                 pass: process.env.PASS,
             },
         });
-
         // Send OTP email
         const info = await transporter.sendMail({
             from: process.env.FROM,
@@ -99,27 +91,20 @@ router.post('/UserSendOtp', async (req, res) => {
 router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) => {
     try {
         const { name, email, mobile, password } = req.body
-        console.log(req.body);
-
         if (!req.file) {
             return res.status(400).json({ message: "Profile Img Not Found" });
         }
-
         if (!name || !email || !mobile || !password) {
             return res.status(400).json({ message: "Something is missing..." })
         }
-
         const Emailexists = await UserModel.findOne({ email: email })
         if (Emailexists) {
             return res.status(400).json({ message: "User already exist with this email..." })
         }
-
         const mobileexist = await UserModel.findOne({ mobile: mobile })
         if (mobileexist) {
             return res.status(400).json({ message: "User already exist with this mobile number..." })
         }
-
-
         const haspassword = await bcrypt.hash(password, 11)
         const UserData = new UserModel({
             ProfileImg: req.file?.originalname,
@@ -135,7 +120,6 @@ router.post("/User/Registration", upload.single('ProfileImg'), async (req, res) 
             email: UserData.email,
             name: UserData.name,
         };
-
         const isAdminData = await UserModel.findById(UserData.id);
         if (isAdminData) {
             if (isAdminData.email === "pradipjedhe69@gmail.com") {
@@ -159,20 +143,16 @@ router.post("/User/Login", async (req, res) => {
     try {
         const { email, password } = req.body;
         let Useremail = await UserModel.findOne({ email })
-        console.log(req.body);
         if (!Useremail) {
             return res.status(404).json({ message: "User not Found..." })
         }
-
         let machpassword = await bcrypt.compare(password, Useremail.password)
         if (!machpassword) return res.status(400).json({ message: "Incorrect Password try again..." })
-
         const payload = {
             id: Useremail._id,
             email: Useremail.email,
             name: Useremail.name,
         }
-
         const token = generateToken(payload)
         return res.status(200).json({ message: "User login successfully...", token })
     } catch (error) {
@@ -214,9 +194,7 @@ router.put("/Eidit/User/Profile/:id", jwtAuthMiddleware, upload.single('ProfileI
         const userId = req.params.id;
         const user = await UserModel.findById(userId);
         if (!user) return res.status(404).json({ Message: "User not found" });
-
         const { name, email, mobile } = req.body;
-
         // Check for duplicate email
         if (email) {
             const emailCheck = await UserModel.findOne({ email });
@@ -224,7 +202,6 @@ router.put("/Eidit/User/Profile/:id", jwtAuthMiddleware, upload.single('ProfileI
                 return res.status(400).json({ message: "Email already exists" });
             }
         }
-
         // Check for duplicate mobile number
         if (mobile) {
             const mobileCheck = await UserModel.findOne({ mobile });
@@ -242,7 +219,6 @@ router.put("/Eidit/User/Profile/:id", jwtAuthMiddleware, upload.single('ProfileI
         if (req.file) {
             user.ProfileImg = req.file.originalname;
         }
-
         // if (email) {
         //     const EmailCheck = await UserModel.findOne({ email })
         //     if (EmailCheck) {
@@ -252,17 +228,6 @@ router.put("/Eidit/User/Profile/:id", jwtAuthMiddleware, upload.single('ProfileI
         //     }
         //     await user.save()
         // }
-
-        // if (mobile) {
-        //     const MobileCheck = await UserModel.findOne({ mobile })
-        //     if (MobileCheck) {
-        //         if (!(MobileCheck.mobile == user.mobile)) {
-        //             return res.status(400).json({ message: "Mobile Number already exists" });
-        //         }
-        //     }
-        //     await user.save()
-        // }
-
         const updatedUser = await user.save();
         res.status(200).json({ updatedUser });
     } catch (error) {
@@ -296,25 +261,17 @@ router.delete("/Admin/Delete/User/:id", jwtAuthMiddleware, async (req, res) => {
         return res.status(500).json({ message: "Internal Server Error..." });
     }
 });
-
-
 router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
     try {
         // Expecting an array of rooms in the request body      
         const { title, description, price, DiscountPercentage, DiscountPrice, location, thumbnail, images, country } = req.body;
-        console.log(req.body);
-
         if (!(req.files.thumbnail && req.files.images)) {
-
             return res.status(400).json({ message: "'images' must be an array" });
         }
-
         // Validate required fields
         if (!title || !description || !price || !DiscountPercentage || !DiscountPrice || !location || !country) {
             return res.status(400).json({ message: "All fields are required" });
         }
-        console.log("thumbnail :", req.files.thumbnail[0].originalname);
-
         // Create a new room object
         const newRooms = new RoomsData({
             title: title,
@@ -329,9 +286,8 @@ router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1
         });
         // Insert the new room data
         const insertedRooms = await RoomsData.insertMany(newRooms);
-
         // Respond with the inserted room data
-        res.status(200).json({ newRooms: insertedRooms });
+       return res.status(200).json({ newRooms: insertedRooms });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -343,8 +299,6 @@ router.put("/Admin/Edit/Rooms/:id", upload.fields([{ name: 'thumbnail', maxCount
         const CardId = req.params.id
         const { title, description, price, DiscountPercentage, DiscountPrice, location, country } = req.body;
         const Card = await RoomsData.findById(CardId)
-        console.log(req.body);
-
         if (!Card) {
             return res.status(400).json({ message: "Rooms Not Fount..." })
         }
@@ -355,13 +309,9 @@ router.put("/Admin/Edit/Rooms/:id", upload.fields([{ name: 'thumbnail', maxCount
         Card.discountPrice = DiscountPrice || Card.discountPrice;
         Card.location = location || Card.location;
         Card.country = country || Card.country;
-        // Handle profile image upload
-        console.log(req.files?.thumbnail);
-
         if (req.files?.thumbnail) {
             Card.thumbnail = req?.files?.thumbnail[0]?.originalname;
         }
-
         if (req.files?.images) {
             Card.images = req.files.images.map(image => ({ imgUrl: image.originalname })) // Mapping over images
         }
@@ -395,7 +345,6 @@ router.delete("/Rooms/Delete/Admin/:id", jwtAuthMiddleware, async (req, res) => 
 router.get("/Payment/AllGet/Admin", jwtAuthMiddleware, async (req, res) => {
     try {
         const PaymentData = await Payment.find()
-        console.log(PaymentData);
         if (!PaymentData) {
             return res.status(400).json({ message: "Not any Payment Data..." })
         }
@@ -486,7 +435,6 @@ router.put("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
         const RoomsId = req.params.RoomsId;
         const Rooms = await RoomsData.findById(RoomsId)
         const User = await UserModel.findById(UserId)
-
         if (!Rooms) {
             return res.status(400).json({ Message: "Rooms Not Found" })
         }
@@ -513,7 +461,6 @@ router.put("/Rooms/User/Like/:RoomsId", jwtAuthMiddleware, async (req, res) => {
 router.post("/User/Contact", async (req, res) => {
     try {
         const { Name, Phone, Subject, Message } = req.body
-        console.log(req.body);
         if (!Name || !Phone || !Subject || !Message) {
             return res.status(400).json({ Message: "All Fild Is Required..." })
         }
