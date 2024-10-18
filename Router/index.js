@@ -2,6 +2,7 @@ import express from "express"
 import multer from "multer"
 import RoomsData from "../Model/RoomsData.js"
 import UserModel from "../Model/UserModel.js"
+import Payment from "../Model/Payments.js"
 import { jwtAuthMiddleware } from "../Middlewares/jwtAuthMiddleware.js"
 import { generateToken } from "../Middlewares/generateToken.js"
 import bcrypt, { hash } from "bcrypt"
@@ -337,11 +338,13 @@ router.post("/rooms/data/owner", upload.fields([{ name: 'thumbnail', maxCount: 1
     }
 });
 
-router.post("/Admin/Edit/Rooms/:id", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
+router.put("/Admin/Edit/Rooms/:id", upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
     try {
         const CardId = req.params.id
         const { title, description, price, DiscountPercentage, DiscountPrice, location, country } = req.body;
         const Card = await RoomsData.findById(CardId)
+        console.log(req.body);
+
         if (!Card) {
             return res.status(400).json({ message: "Rooms Not Fount..." })
         }
@@ -353,10 +356,13 @@ router.post("/Admin/Edit/Rooms/:id", upload.fields([{ name: 'thumbnail', maxCoun
         Card.location = location || Card.location;
         Card.country = country || Card.country;
         // Handle profile image upload
-        if (req.file.thumbnail) {
-            Card.thumbnail = req?.file?.thumbnail[0]?.originalname;
+        console.log(req.files?.thumbnail);
+
+        if (req.files?.thumbnail) {
+            Card.thumbnail = req?.files?.thumbnail[0]?.originalname;
         }
-        if (req.file.images) {
+
+        if (req.files?.images) {
             Card.images = req.files.images.map(image => ({ imgUrl: image.originalname })) // Mapping over images
         }
 
@@ -386,6 +392,19 @@ router.delete("/Rooms/Delete/Admin/:id", jwtAuthMiddleware, async (req, res) => 
     }
 })
 
+router.get("/Payment/AllGet/Admin", jwtAuthMiddleware, async (req, res) => {
+    try {
+        const PaymentData = await Payment.find()
+        console.log(PaymentData);
+        if (!PaymentData) {
+            return res.status(400).json({ message: "Not any Payment Data..." })
+        }
+        return res.status(200).json(PaymentData)
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error..." })
+    }
+})
 // To send The Rooms Data In The Frontend 
 router.get("/Product/data", async (req, res) => {
     try {
