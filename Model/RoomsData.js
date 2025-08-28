@@ -43,4 +43,5 @@ const RoomsSchema = new mongoose.Schema({
     timestamps: true // Correct placement of timestamps
 });
 
+
 export default mongoose.model("Rooms", RoomsSchema);
