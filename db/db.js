@@ -9,5 +9,4 @@ const db = await mongoose.connect(db_url)
     console.log(err);
 })
 
-
 export default db
